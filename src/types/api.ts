@@ -28,27 +28,23 @@ export interface CreateWorkspaceRequest {
   model_name: string
 }
 
-// ── Documents (repositorio local) ────────────────────────────────────────────
+// ── Document metadata (from blob _document.json) ────────────────────────────
 
-export interface PageInfo {
+export interface PageMeta {
   page_number: number
-  image_url: string
   width_px: number
   height_px: number
   width_inch: number
   height_inch: number
 }
 
-export interface Document {
-  id: string
+export interface DocumentMeta {
   original_filename: string
   document_kind: string
+  page_count: number
+  pages: PageMeta[]
   status: string
   total_annotations: number
-  page_count: number
-  pages: PageInfo[]
-  created_at: string
-  updated_at: string
 }
 
 // ── Annotations ───────────────────────────────────────────────────────────────
@@ -62,7 +58,6 @@ export interface BoundingBox {
 
 export interface Annotation {
   id: string
-  document_id: string
   page_number: number
   label: string
   bbox: BoundingBox
@@ -73,7 +68,6 @@ export interface Annotation {
 }
 
 export interface CreateAnnotationRequest {
-  document_id: string
   page_number: number
   label: string
   bbox: BoundingBox
@@ -86,7 +80,7 @@ export interface UpdateAnnotationRequest {
   value_string?: string
 }
 
-// ── Label schema ──────────────────────────────────────────────────────────────
+// ── Label schema (legacy — will be replaced by workspace labels) ─────────────
 
 export interface LabelDefinition {
   name: string
