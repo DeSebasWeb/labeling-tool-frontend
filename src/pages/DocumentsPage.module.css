@@ -1,0 +1,172 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.msg {
+  text-align: center;
+  margin-top: 4rem;
+  color: #64748b;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.btnBack {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #475569;
+  white-space: nowrap;
+}
+.btnBack:hover { background: #f1f5f9; }
+
+.headerInfo {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.headerInfo h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+  color: #1e293b;
+}
+
+.kindBadge {
+  font-size: 0.75rem;
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.modelLabel {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btnSecondary {
+  background: #fff;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnSecondary:hover { background: #eff6ff; }
+.btnSecondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.progress {
+  margin-bottom: 1.5rem;
+}
+
+.progressLabel {
+  font-size: 0.82rem;
+  color: #475569;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.progressBar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 999px;
+  transition: width 0.4s;
+}
+
+.error {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.empty {
+  text-align: center;
+  color: #94a3b8;
+  margin-top: 3rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.table tr:hover td { background: #f8fafc; }
+
+.blobName {
+  font-family: monospace;
+  font-size: 0.88rem;
+  color: #1e293b;
+  word-break: break-all;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgePending  { background: #fef9c3; color: #854d0e; }
+.badgeInProgress { background: #dbeafe; color: #1d4ed8; }
+.badgeDone     { background: #dcfce7; color: #15803d; }
+
+.btnOpen {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnOpen:hover { background: #1d4ed8; }

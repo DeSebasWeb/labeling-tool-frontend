@@ -1,0 +1,241 @@
+.layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+/* ── Canvas panel ── */
+.canvasPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid #e2e8f0;
+}
+
+.canvasHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.btnBack {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: #475569;
+  white-space: nowrap;
+}
+.btnBack:hover { background: #f1f5f9; }
+
+.blobLabel {
+  font-size: 0.85rem;
+  font-family: monospace;
+  color: #334155;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paginator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #475569;
+}
+.paginator button {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.paginator button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.canvas {
+  flex: 1;
+  width: 100%;
+  display: block;
+  object-fit: contain;
+  cursor: crosshair;
+  overflow: auto;
+  max-height: calc(100vh - 48px);
+}
+
+.noDoc {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  background: #fff;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.section {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.section h3 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin: 0 0 0.65rem;
+}
+
+.labelGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.labelBtn {
+  border: 1.5px solid;
+  border-radius: 5px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  background: transparent;
+}
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  resize: vertical;
+  font-family: inherit;
+}
+.textarea:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0.4rem 0 0;
+}
+
+.empty {
+  color: #94a3b8;
+  font-size: 0.83rem;
+  margin: 0;
+}
+
+.annList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.annItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.annDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.annInfo {
+  flex: 1;
+  overflow: hidden;
+}
+
+.annLabel {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.annValue {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btnDelete {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.btnDelete:hover { color: #dc2626; background: #fee2e2; }
+
+.btnExport {
+  width: 100%;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnExport:hover { background: #15803d; }
+.btnExport:disabled { background: #86efac; cursor: not-allowed; }
+
+.exportMsg {
+  font-size: 0.78rem;
+  color: #15803d;
+  margin: 0.5rem 0 0;
+  word-break: break-all;
+}
+
+.error {
+  font-size: 0.78rem;
+  color: #dc2626;
+  margin: 0.5rem 0 0;
+}
