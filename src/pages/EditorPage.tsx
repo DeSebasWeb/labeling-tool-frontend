@@ -1,11 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { documentsApi } from '../api/documents'
-import { annotationsApi } from '../api/annotations'
 import { workspacesApi } from '../api/workspaces'
-import { schemasApi } from '../api/schemas'
-import type { BoundingBox, LabelDefinition } from '../types/api'
+import type { BoundingBox } from '../types/api'
 import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
 
@@ -16,6 +13,21 @@ interface DragState {
   currentY: number
   active: boolean
 }
+
+// Temporary hardcoded labels until Phase 2 (dynamic labels per workspace)
+const TEMP_LABELS = [
+  { name: 'Pagina', color: '#2563eb', description: '' },
+  { name: 'TipoDeDocumento', color: '#16a34a', description: '' },
+  { name: 'DivipolPag', color: '#dc2626', description: '' },
+  { name: 'TotalSufragantes', color: '#9333ea', description: '' },
+  { name: 'TotalVotosUrna', color: '#ea580c', description: '' },
+  { name: 'TipoDeVotoPartido', color: '#0891b2', description: '' },
+  { name: 'VotosEnBlanco', color: '#4f46e5', description: '' },
+  { name: 'VotosNulos', color: '#be123c', description: '' },
+  { name: 'VotosNoMarcados', color: '#65a30d', description: '' },
+  { name: 'FirmasJurados', color: '#c026d3', description: '' },
+  { name: 'HuboRecuento', color: '#0d9488', description: '' },
+]
 
 const BackIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -39,90 +51,58 @@ export default function EditorPage() {
   const decodedBlob = blobName ? decodeURIComponent(blobName) : ''
 
   const [currentPage, setCurrentPage] = useState(1)
-  const [selectedLabel, setSelectedLabel] = useState<string>('')
+  const [selectedLabel, setSelectedLabel] = useState<string>(TEMP_LABELS[0].name)
   const [valueString, setValueString] = useState('')
   const [drag, setDrag] = useState<DragState | null>(null)
-  const [documentId, setDocumentId] = useState<string | null>(null)
   const [exportMsg, setExportMsg] = useState<string | null>(null)
   const [imageLoading, setImageLoading] = useState(false)
 
-  // Cargar workspace para obtener document_kind
+  const labels = TEMP_LABELS
+
+  // Cargar workspace
   const { data: workspace } = useQuery({
     queryKey: ['workspace', workspaceId],
     queryFn: () => workspacesApi.get(workspaceId!),
     enabled: !!workspaceId,
   })
 
-  // Schema dinámico según document_kind del workspace
-  const schemaId = workspace?.document_kind ?? null
-
-  const { data: schema } = useQuery({
-    queryKey: ['schema', schemaId],
-    queryFn: () => schemasApi.get(schemaId!),
-    enabled: !!schemaId,
+  // Cargar metadata del documento desde blob
+  const { data: docMeta } = useQuery({
+    queryKey: ['doc-meta', workspaceId, decodedBlob],
+    queryFn: () => workspacesApi.getDocumentMeta(workspaceId!, decodedBlob),
+    enabled: !!workspaceId && !!decodedBlob,
   })
 
-  const labels: LabelDefinition[] = schema?.labels ?? []
-
-  useEffect(() => {
-    if (labels.length > 0 && !selectedLabel) {
-      setSelectedLabel(labels[0].name)
-    }
-  }, [labels, selectedLabel])
-
-  // Buscar el documento local por original_filename
-  const { data: allDocs } = useQuery({
-    queryKey: ['documents'],
-    queryFn: documentsApi.list,
-  })
-
-  useEffect(() => {
-    if (!allDocs || !decodedBlob) return
-    const existing = allDocs.find((d) => d.original_filename === decodedBlob)
-    if (existing) setDocumentId(existing.id)
-  }, [allDocs, decodedBlob])
-
-  // Documento local (para page_count)
-  const { data: document } = useQuery({
-    queryKey: ['document', documentId],
-    queryFn: () => documentsApi.get(documentId!),
-    enabled: !!documentId,
-  })
-
-  // Páginas del documento (lista de metadatos, no imágenes)
-  const { data: pages = [] } = useQuery({
-    queryKey: ['document-pages', documentId],
-    queryFn: () => documentsApi.getPages(documentId!),
-    enabled: !!documentId,
-  })
-
-  // Anotaciones
+  // Cargar anotaciones desde blob
   const { data: annotations = [] } = useQuery({
-    queryKey: ['annotations', documentId],
-    queryFn: () => annotationsApi.listByDocument(documentId!),
-    enabled: !!documentId,
+    queryKey: ['annotations', workspaceId, decodedBlob],
+    queryFn: () => workspacesApi.listAnnotations(workspaceId!, decodedBlob),
+    enabled: !!workspaceId && !!decodedBlob,
   })
+
+  const annQueryKey = ['annotations', workspaceId, decodedBlob]
 
   const createAnnotation = useMutation({
-    mutationFn: annotationsApi.create,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['annotations', documentId] }),
+    mutationFn: (body: { page_number: number; label: string; bbox: BoundingBox; value_string: string }) =>
+      workspacesApi.createAnnotation(workspaceId!, decodedBlob, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: annQueryKey }),
   })
 
   const deleteAnnotation = useMutation({
-    mutationFn: annotationsApi.delete,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['annotations', documentId] }),
+    mutationFn: (annotationId: string) =>
+      workspacesApi.deleteAnnotation(workspaceId!, decodedBlob, annotationId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: annQueryKey }),
   })
 
   const exportMutation = useMutation({
-    mutationFn: () => workspacesApi.exportLabels(workspaceId!, decodedBlob, documentId!),
+    mutationFn: () => workspacesApi.exportLabels(workspaceId!, decodedBlob),
     onSuccess: (data) => {
       setExportMsg(`Exportado: ${data.labels_blob}`)
       qc.invalidateQueries({ queryKey: ['workspace', workspaceId] })
     },
   })
 
-  const totalPages = document?.page_count ?? pages.length
-  const pageInfo = pages.find((p) => p.page_number === currentPage)
+  const totalPages = docMeta?.page_count ?? 0
   const pageAnnotations = annotations.filter((a) => a.page_number === currentPage)
 
   // Dibujar canvas con imagen + anotaciones + drag
@@ -163,9 +143,9 @@ export default function EditorPage() {
     }
   }, [pageAnnotations, drag, labels])
 
-  // Cargar imagen de la página actual (solo una a la vez)
+  // Cargar imagen de la página actual desde blob
   useEffect(() => {
-    if (!documentId || !pageInfo) return
+    if (!workspaceId || !decodedBlob || totalPages === 0) return
     setImageLoading(true)
     imgRef.current = null
     const img = new Image()
@@ -175,8 +155,8 @@ export default function EditorPage() {
       drawCanvas()
     }
     img.onerror = () => setImageLoading(false)
-    img.src = `/api/documents/${documentId}/pages/${currentPage}/image`
-  }, [documentId, currentPage, pageInfo]) // drawCanvas omitido intencionalmente para no recargar imagen
+    img.src = workspacesApi.pageImageUrl(workspaceId, decodedBlob, currentPage)
+  }, [workspaceId, decodedBlob, currentPage, totalPages])
 
   // Redibujar cuando cambian anotaciones o drag
   useEffect(() => { drawCanvas() }, [drawCanvas])
@@ -202,7 +182,7 @@ export default function EditorPage() {
   }
 
   const handleMouseUp = () => {
-    if (!drag?.active || !documentId || !selectedLabel) { setDrag(null); return }
+    if (!drag?.active || !selectedLabel) { setDrag(null); return }
     const bbox: BoundingBox = {
       x_min: Math.round(Math.min(drag.startX, drag.currentX)),
       y_min: Math.round(Math.min(drag.startY, drag.currentY)),
@@ -210,7 +190,7 @@ export default function EditorPage() {
       y_max: Math.round(Math.max(drag.startY, drag.currentY)),
     }
     if (bbox.x_max - bbox.x_min < 5 || bbox.y_max - bbox.y_min < 5) { setDrag(null); return }
-    createAnnotation.mutate({ document_id: documentId, page_number: currentPage, label: selectedLabel, bbox, value_string: valueString })
+    createAnnotation.mutate({ page_number: currentPage, label: selectedLabel, bbox, value_string: valueString })
     setDrag(null)
     setValueString('')
   }
@@ -218,6 +198,8 @@ export default function EditorPage() {
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page)
   }
+
+  const hasDocument = !!docMeta
 
   return (
     <div className="flex h-full overflow-hidden bg-slate-100">
@@ -239,19 +221,11 @@ export default function EditorPage() {
 
         {/* Canvas area */}
         <div className="flex-1 overflow-auto flex flex-col items-center p-4">
-          {!documentId ? (
-            <div className="flex flex-col items-center justify-center gap-3 h-full text-center px-8">
-              <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
-                <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-                </svg>
-              </div>
-              <p className="text-sm font-semibold text-slate-700">PDF no registrado localmente</p>
-              <p className="text-xs text-slate-500 max-w-xs">
-                Usa "Subir PDF" en la página de documentos para registrarlo antes de etiquetar.
-              </p>
+          {!hasDocument ? (
+            <div className="flex items-center justify-center h-full">
+              <Spinner size="lg" />
             </div>
-          ) : imageLoading || !pageInfo ? (
+          ) : imageLoading ? (
             <div className="flex items-center justify-center h-full">
               <Spinner size="lg" />
             </div>
@@ -392,7 +366,7 @@ export default function EditorPage() {
             variant="success"
             size="md"
             className="w-full"
-            disabled={!documentId || annotations.length === 0}
+            disabled={annotations.length === 0}
             loading={exportMutation.isPending}
             onClick={() => exportMutation.mutate()}
           >
