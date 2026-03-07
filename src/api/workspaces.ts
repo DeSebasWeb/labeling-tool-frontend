@@ -7,6 +7,11 @@ import type {
   CreateAnnotationRequest,
   UpdateAnnotationRequest,
   ExportLabelsResponse,
+  ExtractTextResponse,
+  ScanResponse,
+  ScanAllResponse,
+  AssembleTableResponse,
+  AutoLabelResponse,
 } from '../types/api'
 
 export const workspacesApi = {
@@ -90,4 +95,89 @@ export const workspacesApi = {
         `/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/export`,
       )
       .then((r) => r.data),
+
+  // ── OCR (text extraction proxy) ───────────────────────────────────────────
+
+  extractText: (workspaceId: string, blobName: string, pageNumber: number): Promise<ExtractTextResponse> =>
+    client
+      .post<ExtractTextResponse>(
+        `/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/extract-text`,
+        { page_number: pageNumber },
+      )
+      .then((r) => r.data),
+
+  // ── Scan (unified Surya OCR) ────────────────────────────────────────────
+
+  scan: (workspaceId: string, blobName: string, pageNumber: number): Promise<ScanResponse> =>
+    client
+      .post<ScanResponse>(
+        `/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/scan`,
+        { page_number: pageNumber },
+      )
+      .then((r) => r.data),
+
+  scanAll: (workspaceId: string, blobName: string): Promise<ScanAllResponse> =>
+    client
+      .post<ScanAllResponse>(
+        `/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/scan-all`,
+      )
+      .then((r) => r.data),
+
+  getOcrResults: (workspaceId: string, blobName: string, pageNumber: number): Promise<ScanResponse> =>
+    client
+      .get<ScanResponse>(
+        `/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/ocr/${pageNumber}`,
+      )
+      .then((r) => r.data),
+
+  assembleTable: (
+    workspaceId: string,
+    blobName: string,
+    pageNumber: number,
+    bbox: { x_min: number; y_min: number; x_max: number; y_max: number },
+  ): Promise<AssembleTableResponse> =>
+    client
+      .post<AssembleTableResponse>(
+        `/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/assemble-table`,
+        { page_number: pageNumber, bbox },
+      )
+      .then((r) => r.data),
+
+  // ── Auto-label ──────────────────────────────────────────────────────────
+
+  autoLabel: (
+    workspaceId: string,
+    blobName: string,
+    referenceBlobName: string,
+  ): Promise<AutoLabelResponse> =>
+    client
+      .post<AutoLabelResponse>(
+        `/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/auto-label`,
+        { reference_blob_name: referenceBlobName },
+      )
+      .then((r) => r.data),
+
+  // ── Labels ────────────────────────────────────────────────────────────────
+
+  addLabel: (workspaceId: string, label: { name: string; color: string; description?: string }): Promise<Workspace> =>
+    client
+      .post<Workspace>(`/workspaces/${workspaceId}/labels`, label)
+      .then((r) => r.data),
+
+  updateLabel: (workspaceId: string, labelName: string, updates: { new_name?: string; color?: string; description?: string }): Promise<Workspace> =>
+    client
+      .patch<Workspace>(`/workspaces/${workspaceId}/labels/${labelName}`, updates)
+      .then((r) => r.data),
+
+  removeLabel: (workspaceId: string, labelName: string): Promise<Workspace> =>
+    client
+      .delete<Workspace>(`/workspaces/${workspaceId}/labels/${labelName}`)
+      .then((r) => r.data),
+
+  // ── Workspace deletion ────────────────────────────────────────────────────
+
+  deleteWorkspace: (workspaceId: string): Promise<void> =>
+    client
+      .delete(`/workspaces/${workspaceId}`)
+      .then(() => undefined),
 }

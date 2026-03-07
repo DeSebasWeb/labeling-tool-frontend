@@ -15,6 +15,7 @@ export interface Workspace {
   container_name: string
   document_kind: DocumentKind
   model_name: string
+  labels: LabelDefinition[]
   total_documents: number
   total_done: number
   documents: WorkspaceDocumentEntry[]
@@ -26,6 +27,7 @@ export interface CreateWorkspaceRequest {
   name: string
   document_kind: DocumentKind
   model_name: string
+  labels?: LabelDefinition[]
 }
 
 // ── Document metadata (from blob _document.json) ────────────────────────────
@@ -63,6 +65,8 @@ export interface Annotation {
   bbox: BoundingBox
   value_string: string
   confidence: number
+  text_type?: 'handwritten' | 'printed' | 'unknown'
+  source?: 'manual' | 'layout_detection' | 'ocr'
   created_at: string
   updated_at: string
 }
@@ -86,6 +90,7 @@ export interface LabelDefinition {
   name: string
   color: string
   description: string
+  label_type?: 'text' | 'table' | 'signature'
 }
 
 export interface LabelSchema {
@@ -99,4 +104,116 @@ export interface LabelSchema {
 export interface ExportLabelsResponse {
   labels_blob: string
   workspace_id: string
+}
+
+// ── Layout Detector (layout-detector service) ─────────────────────────────────
+
+export interface LayoutBoundingBoxDto {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+}
+
+export interface LayoutDetectedRegionDto {
+  region_type: string
+  bounding_box: LayoutBoundingBoxDto
+  confidence: number
+}
+
+export interface LayoutPageResultDto {
+  page_number: number
+  regions: LayoutDetectedRegionDto[]
+  processing_time_ms: number
+}
+
+export interface LayoutDetectResponse {
+  document_id: string
+  total_pages: number
+  results: LayoutPageResultDto[]
+  total_processing_time_ms: number
+}
+
+// ── Text Detector / OCR (text-detector service) ───────────────────────────────
+
+export interface OcrExtractionDto {
+  region_id: string
+  page_number: number
+  region_label: string
+  text: string
+  text_type: 'handwritten' | 'printed' | 'unknown'
+  bounding_box: LayoutBoundingBoxDto
+  confidence: number
+}
+
+export interface OcrPageResultDto {
+  page_number: number
+  extractions: OcrExtractionDto[]
+  processing_time_ms: number
+}
+
+export interface ExtractTextResponse {
+  document_id: string
+  total_pages: number
+  total_extractions: number
+  results: OcrPageResultDto[]
+  total_processing_time_ms: number
+}
+
+// ── Scan (unified Surya OCR) ────────────────────────────────────────────────
+
+export interface ScanLineDto {
+  text: string
+  bounding_box: LayoutBoundingBoxDto
+  confidence: number
+}
+
+export interface ScanPageResult {
+  page_number: number
+  lines: ScanLineDto[]
+}
+
+export interface ScanResponse {
+  total_lines: number
+  results: ScanPageResult[]
+}
+
+export interface ScanAllResponse {
+  total_lines: number
+  total_pages_scanned: number
+  results: ScanPageResult[]
+}
+
+// ── OCR Overlay (client-side, not yet an annotation) ─────────────────────────
+
+export interface OcrOverlay {
+  id: string
+  text: string
+  bbox: BoundingBox
+  confidence: number
+  isTable: boolean
+}
+
+// ── Table cell with positional data (for training) ───────────────────────────
+
+export interface CellData {
+  text: string
+  bbox: BoundingBox | null  // null if manually added/edited
+}
+
+export interface AssembleTableResponse {
+  columns: string[]
+  rows: CellData[][]
+}
+
+// ── Auto-label (from reference document) ──────────────────────────────────
+
+export interface AutoLabelPageResult {
+  page_number: number
+  annotations_created: number
+}
+
+export interface AutoLabelResponse {
+  total_annotations: number
+  pages: AutoLabelPageResult[]
 }
