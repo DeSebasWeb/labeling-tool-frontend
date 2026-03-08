@@ -11,6 +11,7 @@ import { Badge } from '../components/ui/Badge'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { PageSpinner } from '../components/ui/Spinner'
 import { EmptyState } from '../components/ui/EmptyState'
+import { Toast } from '../components/ui/Toast'
 
 const STATUS_BADGE: Record<DocumentStatus, { label: string; variant: 'pending' | 'inProgress' | 'done' }> = {
   PENDING:     { label: 'Pendiente',   variant: 'pending' },
@@ -49,6 +50,7 @@ export default function DocumentsPage() {
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'loading' | 'info' } | null>(null)
 
   const { data: workspace, isLoading, error } = useQuery({
     queryKey: ['workspace', workspaceId],
@@ -58,12 +60,35 @@ export default function DocumentsPage() {
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => workspacesApi.uploadDocument(workspaceId!, file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', workspaceId] }),
+    onMutate: () => setToast({ message: `Subiendo ${fileRef.current?.files?.[0]?.name || 'PDF'}...`, type: 'loading' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workspace', workspaceId] })
+      setToast({ message: 'PDF subido exitosamente', type: 'success' })
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.detail || 'Error al subir el archivo'
+      setToast({ message: msg, type: 'error' })
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (blobName: string) => workspacesApi.deleteDocument(workspaceId!, blobName),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', workspaceId] }),
+    onMutate: (blobName) => setToast({ message: `Eliminando ${blobName}...`, type: 'loading' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workspace', workspaceId] })
+      setToast({ message: 'Documento eliminado', type: 'success' })
+    },
+    onError: () => setToast({ message: 'Error al eliminar el documento', type: 'error' }),
+  })
+
+  const markDoneMutation = useMutation({
+    mutationFn: (blobName: string) => workspacesApi.exportLabels(workspaceId!, blobName),
+    onMutate: () => setToast({ message: 'Exportando etiquetas...', type: 'loading' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['workspace', workspaceId] })
+      setToast({ message: 'Etiquetas exportadas y documento marcado como listo', type: 'success' })
+    },
+    onError: () => setToast({ message: 'Error al exportar etiquetas', type: 'error' }),
   })
 
   const handleFileChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,17 +132,17 @@ export default function DocumentsPage() {
       header={
         <Topbar
           left={
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
                 <BackIcon />
                 Workspaces
               </Button>
               <span className="text-slate-300 select-none">|</span>
               <div>
-                <h1 className="text-sm font-bold text-slate-900 leading-none">{workspace.name}</h1>
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <h1 className="text-base font-bold text-slate-900 leading-none">{workspace.name}</h1>
+                <div className="flex items-center gap-2 mt-1">
                   <Badge variant="info">{workspace.document_kind.replace('_', ' ')}</Badge>
-                  <span className="text-xs text-slate-400 font-mono">{workspace.model_name}</span>
+                  <span className="text-sm text-slate-400 font-mono">{workspace.model_name}</span>
                 </div>
               </div>
             </div>
@@ -139,6 +164,15 @@ export default function DocumentsPage() {
         />
       }
     >
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          duration={toast.type === 'loading' ? undefined : 3000}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {isDragOver && (
         <div className="absolute inset-0 z-50 bg-blue-500/10 border-4 border-dashed border-blue-400 rounded-xl m-4 flex flex-col items-center justify-center gap-3 pointer-events-none">
           <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
@@ -163,12 +197,6 @@ export default function DocumentsPage() {
             colorClass={pctDone === 100 ? 'bg-green-500' : 'bg-blue-500'}
           />
         </Card>
-
-        {uploadMutation.isError && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-            {(uploadMutation.error as any)?.response?.data?.detail ?? 'Error al subir el archivo'}
-          </div>
-        )}
 
         {/* Documentos */}
         {workspace.documents.length === 0 ? (
@@ -212,6 +240,16 @@ export default function DocumentsPage() {
                       <TagIcon />
                       {doc.status === 'DONE' ? 'Revisar' : 'Etiquetar'}
                     </Button>
+                    {doc.status !== 'DONE' && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={markDoneMutation.isPending}
+                        onClick={() => markDoneMutation.mutate(doc.blob_name)}
+                      >
+                        Exportar y finalizar
+                      </Button>
+                    )}
                     <button
                       onClick={() => {
                         if (confirm(`¿Eliminar "${doc.blob_name}" y todos sus datos?`))
