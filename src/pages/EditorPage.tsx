@@ -24,13 +24,23 @@ function scanLinesToOverlays(lines: ScanLineDto[]): OcrOverlay[] {
   }))
 }
 
+const E14_DEFAULT_COLUMNS = [
+  'IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3',
+  'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6',
+  'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9',
+]
+
+function defaultColumnName(index: number): string {
+  return E14_DEFAULT_COLUMNS[index] ?? `Col ${index + 1}`
+}
+
 function parseTextToTable(text: string): { columns: string[]; rows: string[][] } {
   const lines = text.split('\n').filter(Boolean)
   if (!lines.length) return { columns: ['Col 1'], rows: [['']] }
   const rows = lines.map((l) => l.split(/\t|\|/).map((s) => s.trim()))
   const maxCols = Math.max(...rows.map((r) => r.length))
   const padded = rows.map((r) => [...r, ...Array(maxCols - r.length).fill('')])
-  return { columns: padded[0].map((_, i) => `Col ${i + 1}`), rows: padded }
+  return { columns: padded[0].map((_, i) => defaultColumnName(i)), rows: padded }
 }
 
 function overlapsAnnotation(ov: OcrOverlay, annotations: Annotation[]): boolean {
@@ -656,7 +666,7 @@ export default function EditorPage() {
       if (!tablePickMode) {
         const hitTableAnn = pageAnnotations.find((a) => {
           const ld = workspace?.labels.find((l) => l.name === a.label)
-          return ld?.label_type === 'table' && a.value_string
+          return ld?.label_type === 'table'
             && clickX >= a.bbox.x_min && clickX <= a.bbox.x_max
             && clickY >= a.bbox.y_min && clickY <= a.bbox.y_max
         })
