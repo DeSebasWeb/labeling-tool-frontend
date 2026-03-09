@@ -206,6 +206,33 @@ export interface AssembleTableResponse {
   rows: CellData[][]
 }
 
+// ── Training ──────────────────────────────────────────────────────────────
+
+export type TrainingStatus = 'PENDING' | 'PREPARING' | 'UPLOADING' | 'TRAINING' | 'COMPLETED' | 'FAILED'
+
+export interface TrainingJob {
+  id: string
+  workspace_id: string
+  status: TrainingStatus
+  model_name: string
+  training_type: string
+  document_type: string
+  document_count: number
+  error_message?: string
+  metrics?: Record<string, unknown>
+  created_at: string
+  updated_at?: string
+  started_at?: string
+  completed_at?: string
+}
+
+export interface StartTrainingResponse {
+  id: string
+  status: string
+  model_name: string
+  workspace_id: string
+}
+
 // ── Auto-label (from reference document) ──────────────────────────────────
 
 export interface AutoLabelPageResult {

@@ -2,7 +2,7 @@ import { useRef, useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { workspacesApi } from '../api/workspaces'
-import type { DocumentStatus } from '../types/api'
+import type { DocumentStatus, TrainingJob, TrainingStatus } from '../types/api'
 import { AppShell } from '../components/layout/AppShell'
 import { Topbar } from '../components/layout/Topbar'
 import { Card } from '../components/ui/Card'
@@ -17,6 +17,29 @@ const STATUS_BADGE: Record<DocumentStatus, { label: string; variant: 'pending' |
   PENDING:     { label: 'Pendiente',   variant: 'pending' },
   IN_PROGRESS: { label: 'En progreso', variant: 'inProgress' },
   DONE:        { label: 'Listo',       variant: 'done' },
+}
+
+const ACTIVE_TRAINING_STATUSES: TrainingStatus[] = ['PENDING', 'PREPARING', 'UPLOADING', 'TRAINING']
+
+function isTrainingActive(jobs: TrainingJob[] | undefined): boolean {
+  if (!jobs || jobs.length === 0) return false
+  return jobs.some((j) => ACTIVE_TRAINING_STATUSES.includes(j.status))
+}
+
+function getLatestJob(jobs: TrainingJob[] | undefined): TrainingJob | null {
+  if (!jobs || jobs.length === 0) return null
+  return jobs.reduce((latest, j) =>
+    new Date(j.created_at) > new Date(latest.created_at) ? j : latest
+  )
+}
+
+const TRAINING_STATUS_CONFIG: Record<TrainingStatus, { label: string; className: string; pulse: boolean }> = {
+  PENDING:    { label: 'Pendiente...',               className: 'bg-blue-100 text-blue-700', pulse: true },
+  PREPARING:  { label: 'Preparando dataset...',      className: 'bg-blue-100 text-blue-700', pulse: true },
+  UPLOADING:  { label: 'Subiendo a Colab...',        className: 'bg-blue-100 text-blue-700', pulse: false },
+  TRAINING:   { label: 'Entrenando modelo...',       className: 'bg-blue-100 text-blue-700', pulse: true },
+  COMPLETED:  { label: 'Modelo entrenado',           className: 'bg-green-100 text-green-700', pulse: false },
+  FAILED:     { label: 'Error en entrenamiento',     className: 'bg-red-100 text-red-700', pulse: false },
 }
 
 const BackIcon = () => (
@@ -44,6 +67,12 @@ const TagIcon = () => (
   </svg>
 )
 
+const TrainIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+  </svg>
+)
+
 export default function DocumentsPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>()
   const navigate = useNavigate()
@@ -56,6 +85,34 @@ export default function DocumentsPage() {
     queryKey: ['workspace', workspaceId],
     queryFn: () => workspacesApi.get(workspaceId!),
     enabled: !!workspaceId,
+  })
+
+  const hasDoneDocs = (workspace?.total_done ?? 0) >= 1
+
+  const { data: trainingJobs } = useQuery({
+    queryKey: ['training-status', workspaceId],
+    queryFn: () => workspacesApi.getTrainingStatus(workspaceId!),
+    enabled: !!workspaceId && hasDoneDocs,
+    refetchInterval: (query) => {
+      const jobs = query.state.data
+      return isTrainingActive(jobs) ? 30_000 : false
+    },
+  })
+
+  const trainingActive = isTrainingActive(trainingJobs)
+  const latestJob = getLatestJob(trainingJobs)
+
+  const trainMutation = useMutation({
+    mutationFn: () => workspacesApi.startTraining(workspaceId!),
+    onMutate: () => setToast({ message: 'Iniciando entrenamiento...', type: 'loading' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['training-status', workspaceId] })
+      setToast({ message: 'Entrenamiento iniciado', type: 'success' })
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.detail || 'Error al iniciar entrenamiento'
+      setToast({ message: msg, type: 'error' })
+    },
   })
 
   const uploadMutation = useMutation({
@@ -148,7 +205,19 @@ export default function DocumentsPage() {
             </div>
           }
           right={
-            <>
+            <div className="flex items-center gap-2">
+              {hasDoneDocs && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  loading={trainMutation.isPending}
+                  disabled={trainingActive}
+                  onClick={() => trainMutation.mutate()}
+                >
+                  <TrainIcon />
+                  {trainMutation.isPending ? 'Iniciando...' : trainingActive ? 'Entrenando...' : 'Entrenar modelo'}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
@@ -159,7 +228,7 @@ export default function DocumentsPage() {
                 {uploadMutation.isPending ? 'Subiendo...' : 'Subir PDF'}
               </Button>
               <input ref={fileRef} type="file" accept=".pdf" className="hidden" onChange={handleFileChange} />
-            </>
+            </div>
           }
         />
       }
@@ -196,6 +265,33 @@ export default function DocumentsPage() {
             label={`${workspace.total_done} documentos completados`}
             colorClass={pctDone === 100 ? 'bg-green-500' : 'bg-blue-500'}
           />
+
+          {/* Training status badge */}
+          {latestJob && (
+            <div className="mt-3 flex items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${TRAINING_STATUS_CONFIG[latestJob.status].className}`}
+              >
+                {TRAINING_STATUS_CONFIG[latestJob.status].pulse && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-current" />
+                  </span>
+                )}
+                {TRAINING_STATUS_CONFIG[latestJob.status].label}
+              </span>
+              {latestJob.status === 'FAILED' && latestJob.error_message && (
+                <span className="text-xs text-red-500 truncate max-w-xs" title={latestJob.error_message}>
+                  {latestJob.error_message}
+                </span>
+              )}
+              {latestJob.status === 'COMPLETED' && latestJob.metrics && (
+                <span className="text-xs text-green-600">
+                  {Object.entries(latestJob.metrics).map(([k, v]) => `${k}: ${v}`).join(' | ')}
+                </span>
+              )}
+            </div>
+          )}
         </Card>
 
         {/* Documentos */}

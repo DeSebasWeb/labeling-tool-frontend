@@ -12,6 +12,8 @@ import type {
   ScanAllResponse,
   AssembleTableResponse,
   AutoLabelResponse,
+  StartTrainingResponse,
+  TrainingJob,
 } from '../types/api'
 
 export const workspacesApi = {
@@ -188,4 +190,16 @@ export const workspacesApi = {
     client
       .delete(`/workspaces/${workspaceId}`)
       .then(() => undefined),
+
+  // ── Training ──────────────────────────────────────────────────────────────
+
+  startTraining: (workspaceId: string): Promise<StartTrainingResponse> =>
+    client
+      .post<StartTrainingResponse>(`/workspaces/${workspaceId}/train`)
+      .then((r) => r.data),
+
+  getTrainingStatus: (workspaceId: string): Promise<TrainingJob[]> =>
+    client
+      .get<TrainingJob[]>(`/workspaces/${workspaceId}/train/status`)
+      .then((r) => r.data),
 }
