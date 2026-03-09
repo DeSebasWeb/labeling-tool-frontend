@@ -66,7 +66,7 @@ export interface Annotation {
   value_string: string
   confidence: number
   text_type?: 'handwritten' | 'printed' | 'unknown'
-  source?: 'manual' | 'layout_detection' | 'ocr'
+  source?: 'manual' | 'layout_detection' | 'ocr' | 'auto_label'
   created_at: string
   updated_at: string
 }
