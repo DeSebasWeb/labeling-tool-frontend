@@ -168,6 +168,7 @@ export default function EditorPage() {
   // Table pick-from-image mode
   const [tablePickMode, setTablePickMode] = useState(false)
   const [tablePickedText, setTablePickedText] = useState<string | null>(null)
+  const tablePickCounter = useRef(0)
   // Resize annotation bbox
   const [resizing, setResizing] = useState<ResizeState | null>(null)
   const [hoveredCorner, setHoveredCorner] = useState<{ annotationId: string; corner: ResizeCorner } | null>(null)
@@ -709,9 +710,9 @@ export default function EditorPage() {
       if (hitOverlay) {
         // If table pick mode is active, send text to the table modal instead
         if (tablePickMode) {
-          // Clear first to ensure useEffect fires even for same text
-          setTablePickedText(null)
-          requestAnimationFrame(() => setTablePickedText(hitOverlay.text))
+          // Use counter suffix to guarantee unique value on every pick (even same text)
+          tablePickCounter.current += 1
+          setTablePickedText(`${hitOverlay.text}\x00${tablePickCounter.current}`)
           setDrag(null)
           return
         }

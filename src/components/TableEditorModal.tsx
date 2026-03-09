@@ -84,10 +84,11 @@ export function TableEditorModal({ labelName, bbox, pageNumber, initialData, pic
   // Target cell highlighted while in pick mode
   const [targetCell, setTargetCell] = useState<{ ri: number; ci: number } | null>(null)
 
-  // When parent sends pickedText, buffer it
+  // When parent sends pickedText, buffer it (strip \x00counter suffix)
   useEffect(() => {
     if (pickedText != null && pickMode) {
-      setBufferedText(pickedText)
+      const clean = pickedText.split('\x00')[0]
+      setBufferedText(clean)
     }
   }, [pickedText, pickMode])
 
