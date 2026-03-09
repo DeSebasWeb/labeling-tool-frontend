@@ -262,12 +262,12 @@ export function TableEditorModal({ labelName, bbox, pageNumber, initialData, pic
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className={`fixed z-50 ${pickMode ? 'bottom-0 left-0 right-0 p-2' : 'inset-0 flex items-center justify-center p-4'}`}
       style={{ backgroundColor: pickMode ? 'transparent' : 'rgba(0,0,0,0.2)', pointerEvents: pickMode ? 'none' : undefined }}
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+        className={`bg-white shadow-2xl flex flex-col ${pickMode ? 'rounded-t-xl max-h-[35vh] w-full' : 'rounded-2xl w-full max-w-4xl max-h-[90vh]'}`}
         style={{
           ...(modalPos ? { position: 'fixed', left: modalPos.x, top: modalPos.y, margin: 0 } : {}),
           pointerEvents: 'auto',
@@ -275,50 +275,56 @@ export function TableEditorModal({ labelName, bbox, pageNumber, initialData, pic
       >
         {/* Header — drag handle */}
         <div
-          className="flex items-center justify-between px-6 py-4 border-b border-slate-200 cursor-grab active:cursor-grabbing select-none"
+          className="flex items-center justify-between px-6 py-3 border-b border-slate-200 cursor-grab active:cursor-grabbing select-none"
           onMouseDown={onHeaderMouseDown}
         >
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Tabla: {labelName}</h2>
-            <p className="text-xs text-slate-500 mt-0.5">{rows.length} filas · {columns.length} columnas · {rows.length * columns.length} celdas</p>
-          </div>
-          <button
-            onClick={handleClose}
-            className="text-slate-400 hover:text-slate-700 transition-colors text-xl leading-none"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex gap-2 px-6 py-3 border-b border-slate-100 bg-slate-50">
-          <Button type="button" variant="secondary" size="sm" onClick={addColumn}>
-            + Columna
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={addRow}>
-            + Fila
-          </Button>
-          <div className="flex-1" />
-          {onPickModeChange && (
-            <Button
-              type="button"
-              variant={pickMode ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={togglePickMode}
-            >
-              {pickMode ? 'Salir de colocar' : 'Colocar desde imagen'}
-            </Button>
-          )}
-        </div>
-
-        {/* Pick mode banner */}
-        {pickMode && (
-          <div className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800">
-            {bufferedText != null ? (
-              <>Texto copiado: <strong className="font-mono">"{bufferedText}"</strong> — haz click en una celda para colocarlo</>
-            ) : (
-              <>Haz click en un texto de la imagen, luego click en la celda donde quieres colocarlo</>
+          <div className="flex items-center gap-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Tabla: {labelName}</h2>
+              {!pickMode && (
+                <p className="text-xs text-slate-500 mt-0.5">{rows.length} filas · {columns.length} columnas · {rows.length * columns.length} celdas</p>
+              )}
+            </div>
+            {/* Pick mode banner inline in header when collapsed */}
+            {pickMode && (
+              <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                {bufferedText != null ? (
+                  <>Texto: <strong className="font-mono">"{bufferedText}"</strong> — click en celda para colocar</>
+                ) : (
+                  <>Click en texto de la imagen, luego en una celda</>
+                )}
+              </div>
             )}
+          </div>
+          <div className="flex items-center gap-2">
+            {onPickModeChange && (
+              <Button
+                type="button"
+                variant={pickMode ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={togglePickMode}
+              >
+                {pickMode ? 'Salir de colocar' : 'Colocar desde imagen'}
+              </Button>
+            )}
+            <button
+              onClick={handleClose}
+              className="text-slate-400 hover:text-slate-700 transition-colors text-xl leading-none"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Toolbar — hidden in pick mode */}
+        {!pickMode && (
+          <div className="flex gap-2 px-6 py-3 border-b border-slate-100 bg-slate-50">
+            <Button type="button" variant="secondary" size="sm" onClick={addColumn}>
+              + Columna
+            </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={addRow}>
+              + Fila
+            </Button>
           </div>
         )}
 
@@ -339,24 +345,28 @@ export function TableEditorModal({ labelName, bbox, pageNumber, initialData, pic
                     className="flex-1 bg-transparent text-xs font-semibold text-slate-700 focus:outline-none min-w-0"
                     placeholder={`Col ${ci + 1}`}
                   />
-                  <button
-                    type="button"
-                    onClick={() => insertColumnAt(ci + 1)}
-                    title={`Insertar columna después de "${col}"`}
-                    className="opacity-0 group-hover/col:opacity-100 text-slate-400 hover:text-blue-500 text-xs leading-none flex-shrink-0 transition-opacity"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </button>
-                  {columns.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeColumn(ci)}
-                      className="text-slate-400 hover:text-red-500 text-xs leading-none flex-shrink-0"
-                    >
-                      ✕
-                    </button>
+                  {!pickMode && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => insertColumnAt(ci + 1)}
+                        title={`Insertar columna después de "${col}"`}
+                        className="opacity-0 group-hover/col:opacity-100 text-slate-400 hover:text-blue-500 text-xs leading-none flex-shrink-0 transition-opacity"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                      </button>
+                      {columns.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeColumn(ci)}
+                          className="text-slate-400 hover:text-red-500 text-xs leading-none flex-shrink-0"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </>
                   )}
                   {/* Resize handle (not on last column) */}
                   {ci < columns.length - 1 && (
@@ -367,7 +377,7 @@ export function TableEditorModal({ labelName, bbox, pageNumber, initialData, pic
                   )}
                 </div>
               ))}
-              <div className="w-12 flex-shrink-0" />
+              {!pickMode && <div className="w-12 flex-shrink-0" />}
             </div>
 
             {/* Data rows */}
@@ -406,28 +416,30 @@ export function TableEditorModal({ labelName, bbox, pageNumber, initialData, pic
                     </div>
                   )
                 })}
-                {/* Row actions */}
-                <div className="w-12 flex-shrink-0 flex items-center justify-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => insertRowAt(ri + 1)}
-                    title={`Insertar fila después de la fila ${ri + 1}`}
-                    className="text-slate-300 hover:text-blue-500 text-xs leading-none transition-colors"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </button>
-                  {rows.length > 1 && (
+                {/* Row actions — hidden in pick mode */}
+                {!pickMode && (
+                  <div className="w-12 flex-shrink-0 flex items-center justify-center gap-0.5">
                     <button
                       type="button"
-                      onClick={() => removeRow(ri)}
-                      className="text-slate-300 hover:text-red-500 text-xs leading-none transition-colors"
+                      onClick={() => insertRowAt(ri + 1)}
+                      title={`Insertar fila después de la fila ${ri + 1}`}
+                      className="text-slate-300 hover:text-blue-500 text-xs leading-none transition-colors"
                     >
-                      ✕
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
                     </button>
-                  )}
-                </div>
+                    {rows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeRow(ri)}
+                        className="text-slate-300 hover:text-red-500 text-xs leading-none transition-colors"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
