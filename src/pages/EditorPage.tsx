@@ -552,6 +552,7 @@ export default function EditorPage() {
 
   const handleMouseDown = (ev: React.MouseEvent<HTMLCanvasElement>) => {
     const { x, y } = canvasCoords(ev)
+    console.log('[PICK DEBUG] mouseDown', { x, y, tablePickMode, overlayCount: currentOcrOverlays.length })
     // In table pick mode, skip resize — go straight to drag so overlay click is detected
     if (!tablePickMode) {
       // Check if clicking on a corner handle to resize
@@ -658,6 +659,7 @@ export default function EditorPage() {
   }
 
   const handleMouseUp = () => {
+    console.log('[PICK DEBUG] mouseUp', { resizing: !!resizing, drag: drag?.active, tablePickMode })
     // Finish resize
     if (resizing) {
       const { annotationId, currentBbox, originalBbox } = resizing
@@ -710,6 +712,7 @@ export default function EditorPage() {
         (ov) => clickX >= ov.bbox.x_min && clickX <= ov.bbox.x_max
           && clickY >= ov.bbox.y_min && clickY <= ov.bbox.y_max,
       )
+      console.log('[PICK DEBUG] hitOverlay?', { hitOverlay: hitOverlay?.text ?? null, clickX, clickY, tablePickMode })
       if (hitOverlay) {
         // If table pick mode is active, send text to the table modal instead
         if (tablePickMode) {
