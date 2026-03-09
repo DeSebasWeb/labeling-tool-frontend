@@ -30,6 +30,18 @@ interface Props {
 
 const MIN_COL_WEIGHT = 5
 
+/** Default E14 column names in order */
+const E14_DEFAULT_COLUMNS = [
+  'IDCandidato1', 'Casilla1', 'Casilla2', 'Casilla3',
+  'IDCandidato2', 'Casilla4', 'Casilla5', 'Casilla6',
+  'IDCandidato3', 'Casilla7', 'Casilla8', 'Casilla9',
+]
+
+/** Returns the E14 column name for a given 0-based index, or a generic fallback */
+function defaultColumnName(index: number): string {
+  return E14_DEFAULT_COLUMNS[index] ?? `Col ${index + 1}`
+}
+
 /** Normalize rows: convert string[][] to CellData[][] if needed */
 function normalizeRows(rows: CellData[][] | string[][]): CellData[][] {
   if (!rows.length) return []
@@ -42,10 +54,10 @@ function normalizeRows(rows: CellData[][] | string[][]): CellData[][] {
 }
 
 export function TableEditorModal({ labelName, bbox, pageNumber, initialData, pickedText, onPickModeChange, onSave, onClose }: Props) {
-  const initCols = initialData?.columns ?? ['Columna 1', 'Columna 2']
+  const initCols = initialData?.columns ?? [...E14_DEFAULT_COLUMNS]
   const initRows: CellData[][] = initialData?.rows
     ? normalizeRows(initialData.rows)
-    : [[{ text: '', bbox: null }, { text: '', bbox: null }], [{ text: '', bbox: null }, { text: '', bbox: null }]]
+    : [E14_DEFAULT_COLUMNS.map(() => ({ text: '', bbox: null }))]
   const [columns, setColumns] = useState<string[]>(initCols)
   const [rows, setRows] = useState<CellData[][]>(initRows)
   // colWeights: relative widths (integers), always sum to 100
@@ -142,7 +154,7 @@ export function TableEditorModal({ labelName, bbox, pageNumber, initialData, pic
 
   function insertColumnAt(position: number) {
     const newCols = [...columns]
-    newCols.splice(position, 0, `Columna ${columns.length + 1}`)
+    newCols.splice(position, 0, defaultColumnName(columns.length))
     const newRows = rows.map((r) => {
       const nr = [...r]
       nr.splice(position, 0, { text: '', bbox: null })
