@@ -82,6 +82,14 @@ export const workspacesApi = {
       .delete(`/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/annotations/${annotationId}`)
       .then(() => undefined),
 
+  clearAnnotationsBySource: (workspaceId: string, blobName: string, source = 'auto_label'): Promise<{ deleted: number }> =>
+    client
+      .delete<{ deleted: number }>(
+        `/workspaces/${workspaceId}/documents/${encodeURIComponent(blobName)}/annotations`,
+        { params: { source } },
+      )
+      .then((r) => r.data),
+
   // ── Workflow ──────────────────────────────────────────────────────────────
 
   markDone: (workspaceId: string, blobName: string): Promise<Workspace> =>
