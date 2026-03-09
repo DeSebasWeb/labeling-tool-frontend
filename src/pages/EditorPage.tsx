@@ -552,12 +552,15 @@ export default function EditorPage() {
 
   const handleMouseDown = (ev: React.MouseEvent<HTMLCanvasElement>) => {
     const { x, y } = canvasCoords(ev)
-    // Check if clicking on a corner handle to resize
-    for (const ann of pageAnnotations) {
-      const corner = getCornerAt(x, y, ann.bbox)
-      if (corner) {
-        setResizing({ annotationId: ann.id, corner, originalBbox: { ...ann.bbox }, currentBbox: { ...ann.bbox } })
-        return
+    // In table pick mode, skip resize — go straight to drag so overlay click is detected
+    if (!tablePickMode) {
+      // Check if clicking on a corner handle to resize
+      for (const ann of pageAnnotations) {
+        const corner = getCornerAt(x, y, ann.bbox)
+        if (corner) {
+          setResizing({ annotationId: ann.id, corner, originalBbox: { ...ann.bbox }, currentBbox: { ...ann.bbox } })
+          return
+        }
       }
     }
     setDrag({ startX: x, startY: y, currentX: x, currentY: y, active: true })
