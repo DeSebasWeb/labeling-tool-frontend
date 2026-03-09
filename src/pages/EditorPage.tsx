@@ -43,12 +43,17 @@ function parseTextToTable(text: string): { columns: string[]; rows: string[][] }
   return { columns: padded[0].map((_, i) => defaultColumnName(i)), rows: padded }
 }
 
-function overlapsAnnotation(ov: OcrOverlay, annotations: Annotation[]): boolean {
+function overlapsAnnotation(ov: OcrOverlay, annotations: Annotation[], workspace?: { labels: { name: string; label_type?: string }[] }): boolean {
   const cx = (ov.bbox.x_min + ov.bbox.x_max) / 2
   const cy = (ov.bbox.y_min + ov.bbox.y_max) / 2
-  return annotations.some(
-    (a) => cx >= a.bbox.x_min && cx <= a.bbox.x_max && cy >= a.bbox.y_min && cy <= a.bbox.y_max,
-  )
+  return annotations.some((a) => {
+    // Don't filter overlays inside table annotations — they're needed for pick-from-image
+    if (workspace) {
+      const ld = workspace.labels.find((l) => l.name === a.label)
+      if (ld?.label_type === 'table') return false
+    }
+    return cx >= a.bbox.x_min && cx <= a.bbox.x_max && cy >= a.bbox.y_min && cy <= a.bbox.y_max
+  })
 }
 
 /** Extract individual cells with bbox from a table annotation's value_string */
@@ -552,7 +557,6 @@ export default function EditorPage() {
 
   const handleMouseDown = (ev: React.MouseEvent<HTMLCanvasElement>) => {
     const { x, y } = canvasCoords(ev)
-    console.log('[PICK DEBUG] mouseDown', { x, y, tablePickMode, overlayCount: currentOcrOverlays.length })
     // In table pick mode, skip resize — go straight to drag so overlay click is detected
     if (!tablePickMode) {
       // Check if clicking on a corner handle to resize
@@ -659,7 +663,6 @@ export default function EditorPage() {
   }
 
   const handleMouseUp = () => {
-    console.log('[PICK DEBUG] mouseUp', { resizing: !!resizing, drag: drag?.active, tablePickMode })
     // Finish resize
     if (resizing) {
       const { annotationId, currentBbox, originalBbox } = resizing
@@ -712,7 +715,6 @@ export default function EditorPage() {
         (ov) => clickX >= ov.bbox.x_min && clickX <= ov.bbox.x_max
           && clickY >= ov.bbox.y_min && clickY <= ov.bbox.y_max,
       )
-      console.log('[PICK DEBUG] hitOverlay?', { hitOverlay: hitOverlay?.text ?? null, clickX, clickY, tablePickMode })
       if (hitOverlay) {
         // If table pick mode is active, send text to the table modal instead
         if (tablePickMode) {
@@ -800,7 +802,7 @@ export default function EditorPage() {
       }
 
       const overlays = scanLinesToOverlays(pageResult.lines)
-        .filter((ov) => !overlapsAnnotation(ov, pageAnnotations))
+        .filter((ov) => !overlapsAnnotation(ov, pageAnnotations, workspace ?? undefined))
 
       setOcrOverlaysMap((prev) => {
         const next = new Map(prev)
@@ -826,7 +828,7 @@ export default function EditorPage() {
       for (const pageResult of result.results) {
         const pageAnns = (annotations ?? []).filter((a) => a.page_number === pageResult.page_number)
         const overlays = scanLinesToOverlays(pageResult.lines)
-          .filter((ov) => !overlapsAnnotation(ov, pageAnns))
+          .filter((ov) => !overlapsAnnotation(ov, pageAnns, workspace ?? undefined))
         totalDetected += overlays.length
         newMap.set(pageResult.page_number, overlays)
       }
@@ -851,7 +853,7 @@ export default function EditorPage() {
       const pageResult = result.results[0]
       if (!pageResult || pageResult.lines.length === 0) return
       const overlays = scanLinesToOverlays(pageResult.lines)
-        .filter((ov) => !overlapsAnnotation(ov, pageAnnotations))
+        .filter((ov) => !overlapsAnnotation(ov, pageAnnotations, workspace ?? undefined))
       if (overlays.length > 0) {
         setOcrOverlaysMap((prev) => {
           const next = new Map(prev)
